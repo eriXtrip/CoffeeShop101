@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'item_card.dart';
 import 'sidebar.dart';
+import 'cart.dart';
+import 'order.dart';
+import 'admin_dashboard.dart';
 
 void main() {
   runApp(const MyApp());
@@ -138,6 +141,150 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   bool _isSidebarLeft = true;
+  bool _isAdmin = false;
+  final List<CartItem> _cartItems = [];
+  final List<Order> _orderQueue = [];
+
+  void _addToCart(CartItem item) {
+    for (var i = 0; i < _cartItems.length; i++) {
+      final existing = _cartItems[i];
+      if (existing.itemName == item.itemName &&
+          existing.sizeName == item.sizeName &&
+          _listEqual(existing.addOnNames, item.addOnNames)) {
+        setState(() => existing.quantity += item.quantity);
+        return;
+      }
+    }
+    setState(() => _cartItems.add(item));
+  }
+
+  bool _listEqual(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  void _updateCartItem(int index, CartItem updated) {
+    setState(() => _cartItems[index] = updated);
+  }
+
+  void _deleteCartItem(int index) {
+    setState(() => _cartItems.removeAt(index));
+  }
+
+  void _clearCart() => setState(() => _cartItems.clear());
+
+  void _incrementCartItem(int index) =>
+      setState(() => _cartItems[index].quantity++);
+
+  void _decrementCartItem(int index) {
+    if (_cartItems[index].quantity > 1) {
+      setState(() => _cartItems[index].quantity--);
+    } else {
+      setState(() => _cartItems.removeAt(index));
+    }
+  }
+
+  void _placeOrder(Order order) {
+    setState(() {
+      _orderQueue.insert(0, order);
+      _cartItems.clear();
+    });
+  }
+
+  void _advanceOrderStatus(int index) {
+    setState(() {
+      _orderQueue[index].status = nextOrderStatus(_orderQueue[index].status);
+    });
+  }
+
+  void _showCheckout(BuildContext context) {
+    final total = _cartItems.fold(0.0, (sum, item) => sum + item.totalPrice);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return CheckoutSheet(
+          cartItems: _cartItems,
+          total: total,
+          onPlaceOrder: _placeOrder,
+        );
+      },
+    );
+  }
+
+  void _showCart(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return CartSheet(
+              items: List.from(_cartItems),
+              onClear: () {
+                _clearCart();
+                setSheetState(() {});
+              },
+              onIncrement: (index) {
+                _incrementCartItem(index);
+                setSheetState(() {});
+              },
+              onDecrement: (index) {
+                _decrementCartItem(index);
+                setSheetState(() {});
+              },
+              onEdit: (index) {
+                final item = _cartItems[index];
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) {
+                    return EditCartSheet(
+                      item: item,
+                      onUpdate: (updated) {
+                        _updateCartItem(index, updated);
+                      },
+                      onDelete: () {
+                        _deleteCartItem(index);
+                      },
+                    );
+                  },
+                ).then((_) => setSheetState(() {}));
+              },
+              onCheckout: () {
+                Navigator.of(context).pop();
+                _showCheckout(context);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildCartIcon(Color iconColor, Color badgeColor) {
+    return Badge(
+      isLabelVisible: _cartItems.isNotEmpty,
+      label: Text(
+        '${_cartItems.fold(0, (sum, item) => sum + item.quantity)}',
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+      textStyle: const TextStyle(color: Colors.white, fontSize: 10),
+      backgroundColor: badgeColor,
+      child: IconButton(
+        icon: Icon(Icons.shopping_cart_outlined, color: iconColor, size: 22),
+        onPressed: () => _showCart(context),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,14 +313,36 @@ class _HomePageState extends State<HomePage> {
       onCategorySelected: (index) {
         setState(() => _selectedIndex = index);
         if (isSmallScreen) {
-          Navigator.of(context).pop(); // Close drawer on selection
+          Navigator.of(context).pop();
         }
       },
       isSidebarLeft: _isSidebarLeft,
       onSidebarLeftChanged: (val) => setState(() => _isSidebarLeft = val),
       isDark: isDark,
       toggleTheme: widget.toggleTheme,
+      isAdmin: _isAdmin,
+      onAdminChanged: (val) => setState(() => _isAdmin = val),
     );
+
+    if (_isAdmin) {
+      return Scaffold(
+        drawer: isSmallScreen && _isSidebarLeft ? Drawer(width: 260, elevation: 0, child: sidebarWidget) : null,
+        endDrawer: isSmallScreen && !_isSidebarLeft ? Drawer(width: 260, elevation: 0, child: sidebarWidget) : null,
+        body: Row(
+          children: [
+            if (!isSmallScreen && _isSidebarLeft) sidebarWidget,
+            Expanded(
+              child: AdminDashboard(
+                orders: _orderQueue,
+                onAdvanceStatus: _advanceOrderStatus,
+                onExitAdmin: () => setState(() => _isAdmin = false),
+              ),
+            ),
+            if (!isSmallScreen && !_isSidebarLeft) sidebarWidget,
+          ],
+        ),
+      );
+    }
 
     Widget mainContent = Expanded(
       child: Container(
@@ -216,6 +385,8 @@ class _HomePageState extends State<HomePage> {
                         color: colorTextMain,
                       ),
                     ),
+                    const Spacer(),
+                    _buildCartIcon(colorTextMain, colorPrimary),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -271,20 +442,23 @@ class _HomePageState extends State<HomePage> {
                       },
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      (AppMenuData.categories[_selectedIndex]['name'] as String).toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 2.0,
-                        color: colorTextMain,
+                      Text(
+                        (AppMenuData.categories[_selectedIndex]['name'] as String).toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2.0,
+                          color: colorTextMain,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(
-                  width: 250,
-                  child: TextField(
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 250,
+                        child: TextField(
                     decoration: InputDecoration(
                       hintText: 'search...',
                       hintStyle: TextStyle(
@@ -309,8 +483,12 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(color: colorTextMain, fontSize: 14),
                   ),
                 ),
+                const SizedBox(width: 8),
+                _buildCartIcon(colorTextMain, colorPrimary),
               ],
             ),
+          ],
+        ),
     ),
             // Main scrollable area
             Expanded(
@@ -364,6 +542,7 @@ class _HomePageState extends State<HomePage> {
                                 itemDescription: item['description'] as String,
                                 availableSizes: sizes,
                                 availableAddOns: addOns,
+                                onAddToOrder: _addToCart,
                               );
                             }).toList(),
                           ),

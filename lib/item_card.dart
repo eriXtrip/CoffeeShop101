@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'cart.dart';
 
 class ItemCard extends StatefulWidget {
   final String imageUrl;
@@ -7,6 +8,7 @@ class ItemCard extends StatefulWidget {
   final String itemDescription;
   final List<Map<String, dynamic>> availableSizes;
   final List<Map<String, dynamic>> availableAddOns;
+  final ValueChanged<CartItem>? onAddToOrder;
 
   const ItemCard({
     super.key,
@@ -16,6 +18,7 @@ class ItemCard extends StatefulWidget {
     required this.itemDescription,
     required this.availableSizes,
     required this.availableAddOns,
+    this.onAddToOrder,
   });
 
   @override
@@ -418,7 +421,36 @@ class _ItemCardState extends State<ItemCard> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            onPressed: () {},
+                            onPressed: () {
+                              if (widget.onAddToOrder == null) return;
+                              final sizeMap = widget.availableSizes.firstWhere(
+                                (s) => s['name'] == _selectedSize,
+                                orElse: () => {'price': 0.0},
+                              );
+                              final names = <String>[];
+                              double addOnCost = 0;
+                              _addOns.forEach((key, isSelected) {
+                                if (isSelected) {
+                                  final name = key.split(' (')[0];
+                                  final addOnMap = widget.availableAddOns.firstWhere(
+                                    (a) => a['name'] == name,
+                                    orElse: () => {'price': 0.0},
+                                  );
+                                  names.add(name);
+                                  addOnCost += (addOnMap['price'] as num).toDouble();
+                                }
+                              });
+                              widget.onAddToOrder!(CartItem(
+                                itemName: widget.itemName,
+                                sizeName: _selectedSize,
+                                sizePrice: (sizeMap['price'] as num).toDouble(),
+                                addOnNames: names,
+                                addOnsPrice: addOnCost,
+                                quantity: _quantity,
+                                availableSizes: widget.availableSizes,
+                                availableAddOns: widget.availableAddOns,
+                              ));
+                            },
                             child: Text(
                               'Add to Order',
                               style: TextStyle(

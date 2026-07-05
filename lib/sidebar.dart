@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'main.dart'; // import to access AppColors and AppMenuData
+import 'main.dart';
+import 'login.dart';
 
 class Sidebar extends StatelessWidget {
   final int selectedIndex;
@@ -8,6 +9,8 @@ class Sidebar extends StatelessWidget {
   final ValueChanged<bool> onSidebarLeftChanged;
   final bool isDark;
   final VoidCallback toggleTheme;
+  final bool isAdmin;
+  final ValueChanged<bool> onAdminChanged;
 
   const Sidebar({
     super.key,
@@ -17,6 +20,8 @@ class Sidebar extends StatelessWidget {
     required this.onSidebarLeftChanged,
     required this.isDark,
     required this.toggleTheme,
+    this.isAdmin = false,
+    required this.onAdminChanged,
   });
 
   @override
@@ -113,13 +118,26 @@ class Sidebar extends StatelessWidget {
             activeColor: colorPrimary,
             textColor: colorTextMuted,
           ),
+          _buildMinimalToggle(
+            label: 'admin mode',
+            value: isAdmin,
+            onChanged: onAdminChanged,
+            activeColor: Colors.amber,
+            textColor: colorTextMuted,
+          ),
           const SizedBox(height: 32),
 
           // Action State Button
           SizedBox(
             width: double.infinity,
             child: TextButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const LoginPage(),
+                  ),
+                );
+              },
               style: TextButton.styleFrom(
                 backgroundColor: colorTextMain,
                 foregroundColor: bgSidebar,
