@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'cart.dart';
 
@@ -5,6 +6,7 @@ class Order {
   final String customerName;
   final List<CartItem> items;
   final String paymentMethod;
+  final String note;
   final DateTime timestamp;
   String status;
 
@@ -12,6 +14,7 @@ class Order {
     required this.customerName,
     required this.items,
     required this.paymentMethod,
+    this.note = '',
     DateTime? timestamp,
     this.status = 'pending',
   }) : timestamp = timestamp ?? DateTime.now();
@@ -39,12 +42,14 @@ class CheckoutSheet extends StatefulWidget {
   final List<CartItem> cartItems;
   final double total;
   final ValueChanged<Order> onPlaceOrder;
+  final Uint8List? qrImageData;
 
   const CheckoutSheet({
     super.key,
     required this.cartItems,
     required this.total,
     required this.onPlaceOrder,
+    this.qrImageData,
   });
 
   @override
@@ -53,11 +58,13 @@ class CheckoutSheet extends StatefulWidget {
 
 class _CheckoutSheetState extends State<CheckoutSheet> {
   final _nameController = TextEditingController();
+  final _noteController = TextEditingController();
   String _paymentMethod = 'cash';
 
   @override
   void dispose() {
     _nameController.dispose();
+    _noteController.dispose();
     super.dispose();
   }
 
@@ -157,25 +164,58 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
               ),
               child: Column(
                 children: [
-                  Icon(Icons.qr_code, size: 48, color: primaryColor),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Scan QR to Pay',
-                    style: TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600, color: textColor,
+                  if (widget.qrImageData != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(widget.qrImageData!, height: 160, fit: BoxFit.contain),
+                    )
+                  else ...[
+                    Icon(Icons.qr_code, size: 48, color: primaryColor),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Scan QR to Pay',
+                      style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600, color: textColor,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Replace assets/qrcode.png with your GCash QR',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11, color: textMuted),
-                  ),
+                  ],
+                  const SizedBox(height: 8),
+                  if (widget.qrImageData == null)
+                    Text('No QR uploaded by admin', textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 11, color: textMuted)),
                 ],
               ),
             ),
             const SizedBox(height: 20),
           ],
+
+          TextField(
+            controller: _noteController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              labelText: 'Notes',
+              hintText: 'Add a note to this order...',
+              labelStyle: TextStyle(color: textMuted, fontSize: 13),
+              hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.5), fontSize: 13),
+              filled: true,
+              fillColor: bgSurface,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: primaryColor, width: 2),
+              ),
+            ),
+            style: TextStyle(color: textColor, fontSize: 14),
+          ),
+          const SizedBox(height: 20),
 
           Container(
             width: double.infinity,
@@ -223,6 +263,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                   customerName: _nameController.text.trim(),
                   items: List.from(widget.cartItems),
                   paymentMethod: _paymentMethod,
+                  note: _noteController.text.trim(),
                 ));
                 Navigator.of(context).pop();
               },
@@ -397,6 +438,10 @@ class AdminPanel extends StatelessWidget {
                             style: TextStyle(fontSize: 13, color: textColor),
                           ),
                         )),
+                        if (order.note.isNotEmpty) Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(order.note, style: TextStyle(fontSize: 12, color: textMuted, fontStyle: FontStyle.italic)),
+                        ),
                         const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -91,10 +91,10 @@ class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  State<MyApp> createState() => MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> {
   ThemeMode _themeMode = ThemeMode.dark;
 
   void toggleTheme() {
@@ -320,8 +320,6 @@ class _HomePageState extends State<HomePage> {
       onSidebarLeftChanged: (val) => setState(() => _isSidebarLeft = val),
       isDark: isDark,
       toggleTheme: widget.toggleTheme,
-      isAdmin: _isAdmin,
-      onAdminChanged: (val) => setState(() => _isAdmin = val),
     );
 
     if (_isAdmin) {
@@ -336,6 +334,7 @@ class _HomePageState extends State<HomePage> {
                 orders: _orderQueue,
                 onAdvanceStatus: _advanceOrderStatus,
                 onExitAdmin: () => setState(() => _isAdmin = false),
+                onPlaceOrder: _placeOrder,
               ),
             ),
             if (!isSmallScreen && !_isSidebarLeft) sidebarWidget,

@@ -9,8 +9,6 @@ class Sidebar extends StatelessWidget {
   final ValueChanged<bool> onSidebarLeftChanged;
   final bool isDark;
   final VoidCallback toggleTheme;
-  final bool isAdmin;
-  final ValueChanged<bool> onAdminChanged;
 
   const Sidebar({
     super.key,
@@ -20,8 +18,6 @@ class Sidebar extends StatelessWidget {
     required this.onSidebarLeftChanged,
     required this.isDark,
     required this.toggleTheme,
-    this.isAdmin = false,
-    required this.onAdminChanged,
   });
 
   @override
@@ -116,13 +112,6 @@ class Sidebar extends StatelessWidget {
             value: isDark,
             onChanged: (val) => toggleTheme(),
             activeColor: colorPrimary,
-            textColor: colorTextMuted,
-          ),
-          _buildMinimalToggle(
-            label: 'admin mode',
-            value: isAdmin,
-            onChanged: onAdminChanged,
-            activeColor: Colors.amber,
             textColor: colorTextMuted,
           ),
           const SizedBox(height: 32),

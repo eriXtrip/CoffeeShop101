@@ -76,12 +76,13 @@ class _LoginFormState extends State<_LoginForm> {
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
     if (username.isEmpty || password.isEmpty) return;
-    Navigator.of(context).pushReplacement(
+    Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AdminDashboard(
           orders: const [],
           onAdvanceStatus: (index) {},
-          onExitAdmin: () {},
+          onExitAdmin: () => Navigator.of(context).popUntil((route) => route.isFirst),
+          onPlaceOrder: (order) {},
         ),
       ),
     );
